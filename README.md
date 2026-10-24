@@ -4,19 +4,21 @@
 
 **Notes:** scaffolder runs at build time; production build, server reads `PORT`; health path `/`
 
+Flisk bring-your-own template. The container contract is in [docs/byo.md](https://github.com/flisk-sh/flisk/blob/main/docs/byo.md).
+
 ## Check it
 
-Needs Docker. Builds the image, runs it with `PORT=4000` and expects HTTP 200 on `/`:
+CI runs two checks on every pull request: `verify` builds the image, runs it with `PORT=4000` and expects HTTP 200 on `/`;
+`e2e` registers it in a throwaway Flisk project, runs `flisk up`, and expects HTTP 200 through Traefik. To build it yourself:
 
 ```bash
-tests/e2e/resource-types/bring-your-own/verify-byo-example.sh create-bati /
+docker build -t template . && docker run --rm -e PORT=4000 -p 4000:4000 template
 ```
 
 ## Register it in a Flisk project
 
 ```bash
-flisk resource create-bati-api --type bring-your-own --stack shop --dockerfile ./Dockerfile --yes
+flisk resource bati-app --type bring-your-own --stack shop --dockerfile ./Dockerfile --yes
 ```
 
-Use a resource name that is unique across Flisk projects sharing one Docker daemon. See
-[../README.md](../README.md) and [docs/byo.md](../../../docs/byo.md) for the container contract.
+Use a resource name that is unique across Flisk projects sharing one Docker daemon.
