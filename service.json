@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "appName": "bati-app",
+  "appType": "bring-your-own",
+  "stack": "shop",
+  "port": 3000,
+  "healthCheckPath": "/",
+  "dockerfile": "./Dockerfile",
+  "template": {
+    "id": "bati",
+    "label": "Bati (create-bati, React + Hono)",
+    "upstream": "npm create bati@latest",
+    "description": "A real create-bati app (React + Hono, no database), production build",
+    "notes": "Scaffolder runs at build time; production build; the server reads PORT and binds all interfaces."
+  }
+}
