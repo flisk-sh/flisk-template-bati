@@ -1,0 +1,17 @@
+name: docker-pin
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  docker-pin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Check the Dockerfile scaffolder pin
+        run: |
+          node scripts/check-docker-pin.mjs
+          node --test scripts/check-docker-pin.test.mjs
