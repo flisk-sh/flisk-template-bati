@@ -33,3 +33,7 @@ flisk resource bati-app-copy --type bring-your-own --stack shop --dockerfile ./D
 Use a resource name that is unique across Flisk projects sharing one Docker daemon.
 
 After `flisk up`, open the URL printed by `flisk status` (for a web UI like this template it is the host-root URL, not `/api/bati-app`).
+
+## Keeping the scaffolder reproducible
+
+The Dockerfile pins the scaffolder at `npm create bati@0.0.343`. Check new releases with `npm view create-bati version`, update that one version and rebuild the image. The `docker-pin` CI job rejects any `@latest` in the Dockerfile.
