@@ -46,7 +46,7 @@ jobs:
 
       - name: Install Tilt
         run: |
-          curl -fsSL --retry 3 -o tilt.tgz https://github.com/tilt-dev/tilt/releases/download/v0.37.8/tilt.0.37.8.linux.x86_64.tar.gz
+          curl -fsSL --proto '=https' --proto-redir '=https' --retry 3 -o tilt.tgz https://github.com/tilt-dev/tilt/releases/download/v0.37.8/tilt.0.37.8.linux.x86_64.tar.gz
           echo "e39513f958705d30524d55f68b1d46fbef2b46a0da568efd00e6383dee6be44f  tilt.tgz" | sha256sum -c -
           mkdir -p "$HOME/.local/bin" && tar -xzf tilt.tgz -C "$HOME/.local/bin" tilt && rm -f tilt.tgz
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
