@@ -9,7 +9,8 @@ Flisk bring-your-own template. The container contract is in [docs/byo.md](https:
 ## Check it
 
 CI runs two checks on every pull request: `verify` builds the image, runs it with `PORT=4000` and expects HTTP 200 on `/`;
-`e2e` registers it in a throwaway Flisk project, runs `flisk up`, and expects HTTP 200 through Traefik. To build it yourself:
+`e2e` registers it in a throwaway Flisk project, runs `flisk up`, and expects HTTP 200 through Traefik. The `e2e` job stops after
+10 minutes and its `flisk up` step after 5, then prints `flisk status` and uploads the evidence before failing. To build it yourself:
 
 ```bash
 docker build -t template . && docker run --rm -e PORT=4000 -p 4000:4000 template

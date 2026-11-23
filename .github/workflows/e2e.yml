@@ -8,9 +8,89 @@ permissions:
 concurrency:
   group: e2e-${{ github.ref }}
   cancel-in-progress: true
+env:
+  # The e2e script and the workflow it came from must move together.
+  FLISK_REF: 29956b8c9308f666cecdde88f2cfbf475044f965
+  FLISK_VERSION: latest
 jobs:
   e2e:
-    # Runs this template through a real `flisk up` and Traefik (flisk-sh/flisk#1965). Bump both SHAs together.
-    uses: flisk-sh/flisk/.github/workflows/byo-template-e2e.yml@29956b8c9308f666cecdde88f2cfbf475044f965
-    with:
-      flisk-ref: 29956b8c9308f666cecdde88f2cfbf475044f965
+    name: e2e (flisk up)
+    # Local copy of flisk-sh/flisk's byo-template-e2e workflow: a job that calls a reusable
+    # workflow cannot set timeout-minutes or a step timeout, so a hung flisk up held a runner.
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out the template
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          path: template
+          persist-credentials: false
+
+      - name: Check out the e2e script
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: flisk-sh/flisk
+          ref: ${{ env.FLISK_REF }}
+          path: flisk
+          sparse-checkout: scripts/e2e
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.23.5
+
+      # `flisk project` checks for Bun 1.2+; same pinned action as flisk's workflow.
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: "1.4.4"
+
+      - name: Install Tilt
+        run: |
+          curl -fsSL --proto '=https' --proto-redir '=https' --retry 3 -o tilt.tgz https://github.com/tilt-dev/tilt/releases/download/v0.37.8/tilt.0.37.8.linux.x86_64.tar.gz
+          echo "e39513f958705d30524d55f68b1d46fbef2b46a0da568efd00e6383dee6be44f  tilt.tgz" | sha256sum -c -
+          mkdir -p "$HOME/.local/bin" && tar -xzf tilt.tgz -C "$HOME/.local/bin" tilt && rm -f tilt.tgz
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install Flisk
+        run: |
+          META=$(npm view "@flisk-sh/flisk@${FLISK_VERSION}" dist.tarball dist.integrity --json)
+          TARBALL_URL=$(node -p 'JSON.parse(process.argv[1])["dist.tarball"]' "$META")
+          EXPECTED=$(node -p 'JSON.parse(process.argv[1])["dist.integrity"]' "$META")
+          mkdir -p "$HOME/.local/bin" "$RUNNER_TEMP/flisk-pkg"
+          TARBALL="$RUNNER_TEMP/flisk-pkg/flisk.tgz"
+          curl --fail --location --silent --show-error --retry 3 "$TARBALL_URL" --output "$TARBALL"
+          ACTUAL="sha512-$(openssl dgst -sha512 -binary "$TARBALL" | openssl base64 -A)"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::Tarball integrity $ACTUAL does not match the registry's $EXPECTED"
+            exit 1
+          fi
+          printf '#!/bin/sh\nexec npm exec --yes --package="%s" -- flisk "$@"\n' "$TARBALL" > "$HOME/.local/bin/flisk"
+          chmod +x "$HOME/.local/bin/flisk"
+
+      - name: Tool versions
+        run: |
+          echo "docker: $(docker --version)"
+          echo "bun: $(bun --version)"
+          echo "tilt: $(tilt version)"
+          echo "flisk: $(flisk --version)"
+
+      - name: Run the template through flisk up
+        timeout-minutes: 5
+        env:
+          EVIDENCE_DIR: ${{ runner.temp }}/evidence
+        run: flisk/scripts/e2e/verify-byo-template.sh template
+
+      - name: Diagnose a hung flisk up
+        if: failure()
+        timeout-minutes: 2
+        working-directory: template
+        run: flisk status || true
+
+      - name: Keep the flisk up log
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: byo-template-e2e-evidence
+          path: ${{ runner.temp }}/evidence
+          retention-days: 7
+          if-no-files-found: ignore
